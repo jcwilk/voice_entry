@@ -1,13 +1,14 @@
 import openai
-from gi.repository import Notify
-import subprocess
+import os
 import pyaudio
 import wave
+from gi.repository import Notify
+import subprocess
 import time
-import audioop
 
 openai.api_key = "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"
-PAUSE_TIME_GRACE_PERIOD = 2  # Adjust this value to change the grace period
+FLAG_FILE_NAME = "recording_flag.txt"
+AUDIO_FILE_NAME = "audio.wav"
 
 def set_clipboard(text):
     process = subprocess.Popen(['xclip', '-selection', 'c'], stdin=subprocess.PIPE)
@@ -22,50 +23,43 @@ def print_and_notify(title, text):
     print(title, text)
     send_notification(title, text)
 
-def save_audio_input(file_name):
+def start_recording():
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 16000
-    SILENCE_THRESHOLD = 300  # Adjust this value to change the silence threshold
 
     p = pyaudio.PyAudio()
-
-    stream = p.open(format=FORMAT,
-                    channels=CHANNELS,
-                    rate=RATE,
-                    input=True,
-                    frames_per_buffer=CHUNK)
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
     print_and_notify("Info", "Please say something...")
 
     frames = []
-    last_non_silent_time = time.time()
 
-    while time.time() - last_non_silent_time < PAUSE_TIME_GRACE_PERIOD:
-        data = stream.read(CHUNK)
-        rms = audioop.rms(data, 2)
-        if rms > SILENCE_THRESHOLD:
-            last_non_silent_time = time.time()
-        frames.append(data)
+    while os.path.isfile(FLAG_FILE_NAME):
+        frames.append(stream.read(CHUNK))
+        time.sleep(0.1)
 
     stream.stop_stream()
     stream.close()
     p.terminate()
 
-    wf = wave.open(file_name, 'wb')
+    wf = wave.open(AUDIO_FILE_NAME, 'wb')
     wf.setnchannels(CHANNELS)
     wf.setsampwidth(p.get_sample_size(FORMAT))
     wf.setframerate(RATE)
     wf.writeframes(b''.join(frames))
     wf.close()
 
-def get_audio_input():
-    file_name = "audio.wav"
-    save_audio_input(file_name)
+    get_audio_input()
 
+def stop_recording():
+    if os.path.isfile(FLAG_FILE_NAME):
+        os.remove(FLAG_FILE_NAME)
+
+def get_audio_input():
     try:
-        with open(file_name, "rb") as audio_file:
+        with open(AUDIO_FILE_NAME, "rb") as audio_file:
             transcript = openai.Audio.transcribe("whisper-1", audio_file)
         text = transcript['text']
         print_and_notify("You said:", text)
@@ -73,5 +67,13 @@ def get_audio_input():
     except Exception as e:
         print_and_notify("Error", f"Could not request results from OpenAI Speech to Text service; {e}")
 
+def main():
+    if os.path.isfile(FLAG_FILE_NAME):
+        stop_recording()
+    else:
+        with open(FLAG_FILE_NAME, 'w') as f:
+            pass
+        start_recording()
+
 if __name__ == "__main__":
-    get_audio_input()
+    main()
