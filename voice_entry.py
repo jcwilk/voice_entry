@@ -37,8 +37,16 @@ def start_recording():
     frames = []
 
     while os.path.isfile(FLAG_FILE_NAME):
-        frames.append(stream.read(CHUNK))
-        time.sleep(0.1)
+        if stream.get_read_available() > 0:  # data available to read
+            data = stream.read(stream.get_read_available(), exception_on_overflow=False)
+            frames.append(data)
+        time.sleep(0.1)  # sleep to avoid excessive CPU usage
+
+
+    # Capture any data left in the buffer before closing the stream
+    if not stream.is_stopped():
+        data = stream.read(CHUNK)
+        frames.append(data)
 
     stream.stop_stream()
     stream.close()
