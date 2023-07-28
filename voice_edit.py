@@ -6,8 +6,9 @@ import pyaudio
 import wave
 import time
 import audioop
+import config
 
-openai.api_key = "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"
+openai.api_key = config.OPENAI_API_KEY
 
 PAUSE_TIME_GRACE_PERIOD = 2  # Adjust this value to change the grace period
 

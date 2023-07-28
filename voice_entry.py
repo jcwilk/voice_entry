@@ -5,8 +5,10 @@ import wave
 from gi.repository import Notify
 import subprocess
 import time
+import config
 
-openai.api_key = "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"
+openai.api_key = config.OPENAI_API_KEY
+
 FLAG_FILE_NAME = "recording_flag.txt"
 AUDIO_FILE_NAME = "audio.wav"
 
