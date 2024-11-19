@@ -1,4 +1,4 @@
-import openai
+from openai import OpenAI
 import os
 import pyaudio
 import wave
@@ -7,7 +7,9 @@ import subprocess
 import time
 import config
 
-openai.api_key = config.OPENAI_API_KEY
+client = OpenAI(
+    api_key=config.OPENAI_API_KEY,
+)
 
 FLAG_FILE_NAME = "recording_flag.txt"
 AUDIO_FILE_NAME = "audio.wav"
@@ -44,7 +46,6 @@ def start_recording():
             frames.append(data)
         time.sleep(0.1)  # sleep to avoid excessive CPU usage
 
-
     # Capture any data left in the buffer before closing the stream
     if not stream.is_stopped():
         data = stream.read(CHUNK)
@@ -70,8 +71,11 @@ def stop_recording():
 def get_audio_input():
     try:
         with open(AUDIO_FILE_NAME, "rb") as audio_file:
-            transcript = openai.Audio.transcribe("whisper-1", audio_file)
-        text = transcript['text']
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+        text = transcript.text
         print_and_notify("You said:", text)
         set_clipboard(text)
     except Exception as e:

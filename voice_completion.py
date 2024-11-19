@@ -80,24 +80,21 @@ def get_audio_input():
 
 def send_text_to_openai_api(text):
     try:
-        prompt_template = (
-            "Given the following request:\n"
-            "```\n"
-            "{task_description}\n"
-            "```\n"
-            "Omitting any \"```\" formatting marks, the code to satisfy the ask follows the colon:\n"
+        completion = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                { "role": "system", "content": "You are a code generator. The user will dictate a request describing the generation of some code-like text. The dictation will be transcribed and provided as user input. There may be incorrect homonyms or other similar transcription errors. Your response should contain ONLY the requested output, NO surrounding triple-ticks or explanations unless they are EXPLICITLY asked for." },
+                { "role": "user", "content": f"""
+Transcribed request:
+```
+{text}
+```"""
+                }
+            ],
+            temperature=0.1,
+            max_tokens=1000
         )
-
-        completion = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=prompt_template.format(task_description=text),
-            max_tokens=1000,
-            n=1,
-            stop=None,
-            temperature=0.5,
-            top_p=1
-        )
-        response = completion.choices[0].text
+        response = completion['choices'][0]['message']['content']
         return response.strip()
     except Exception as e:
         return f"Error: {e}"

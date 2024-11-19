@@ -88,15 +88,17 @@ def get_audio_input():
 
 def send_text_and_code_to_openai_edit_api(instruction, code):
     try:
-        edit = openai.Edit.create(
-            model="code-davinci-edit-001",
-            input=code,
-            instruction=instruction,
-            n=1,
-            temperature=0.5,
-            top_p=1
+        edit = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                { "role": "system", "content": "Apply the changes requested by the user to the code." },
+                { "role": "user", "content": instruction },
+                { "role": "user", "content": code }
+            ],
+            temperature=0.1,
+            max_tokens=6000
         )
-        response = edit.choices[0].text
+        response = edit['choices'][0]['message']['content']
         return response.strip()
     except Exception as e:
         return f"Error: {e}"
