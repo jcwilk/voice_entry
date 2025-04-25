@@ -10,6 +10,7 @@ import config
 import time
 import log_utils
 import gi
+from pathlib import Path
 gi.require_version('Notify', '0.7')
 from gi.repository import Notify
 
@@ -50,11 +51,28 @@ def transcribe_audio() -> Optional[str]:
     """Transcribe the audio file and return the text."""
     log_utils.log_info("Starting audio transcription")
     try:
-        with open(AUDIO_FILE_NAME, "rb") as audio_file:
-            transcript = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file
-            )
+        # Use pathlib to handle the file
+        audio_path = Path(AUDIO_FILE_NAME)
+        if not audio_path.exists():
+            log_utils.log_error("Audio file does not exist")
+            return None
+            
+        if audio_path.stat().st_size == 0:
+            log_utils.log_error("Audio file is empty")
+            return None
+            
+        # Read the entire file into memory
+        audio_data = audio_path.read_bytes()
+        
+        # Create a file-like object from the bytes
+        from io import BytesIO
+        audio_file = BytesIO(audio_data)
+        audio_file.name = "audio.wav"  # Set a name for the file-like object
+        
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file
+        )
         text = transcript.text
         log_utils.log_info(f"Transcription successful: {text[:50]}...")
         return text

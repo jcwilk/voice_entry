@@ -16,7 +16,6 @@ import tkinter as tk
 AUDIO_FILE_NAME: str = os.path.join(tempfile.gettempdir(), "voice_entry_audio.wav")
 PID_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry.pid")
 TEXT_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry_text.txt")
-RAW_AUDIO_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry_raw.wav")
 
 class AudioState(NamedTuple):
     stream: Optional[pyaudio.Stream] = None
@@ -47,10 +46,11 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
             state.audio.terminate()
         
         if state.wave_file is not None:
+            # Ensure all data is written and file is properly closed
+            state.wave_file.flush()
             state.wave_file.close()
-    
-    # Save the recorded audio
-    save_audio()
+            # Force sync to disk
+            os.fsync(os.open(AUDIO_FILE_NAME, os.O_RDONLY))
     
     # Transcribe the audio
     text = voice_utils.transcribe_audio()
@@ -98,8 +98,8 @@ def record_audio(state: AudioState) -> AudioState:
     audio = pyaudio.PyAudio()
     stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
-    # Open raw audio file for writing
-    wave_file = wave.open(RAW_AUDIO_FILE, 'wb')
+    # Open audio file for writing
+    wave_file = wave.open(AUDIO_FILE_NAME, 'wb')
     wave_file.setnchannels(CHANNELS)
     wave_file.setsampwidth(audio.get_sample_size(FORMAT))
     wave_file.setframerate(RATE)
@@ -134,21 +134,6 @@ def record_audio(state: AudioState) -> AudioState:
             
         log_utils.log_info("Recording stopped")
         return AudioState(recording=False)
-
-def save_audio() -> None:
-    """Save recorded audio to the final file."""
-    if not os.path.exists(RAW_AUDIO_FILE):
-        log_utils.log_error("No raw audio file found")
-        return
-
-    log_utils.log_info(f"Copying raw audio to {AUDIO_FILE_NAME}")
-    # Copy the raw audio file to the final location
-    with open(RAW_AUDIO_FILE, 'rb') as src, open(AUDIO_FILE_NAME, 'wb') as dst:
-        dst.write(src.read())
-    
-    # Clean up raw audio file
-    os.remove(RAW_AUDIO_FILE)
-    log_utils.log_info("Audio saved successfully")
 
 def is_recording() -> bool:
     """Check if a recording is in progress."""
