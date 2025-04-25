@@ -2,3 +2,5 @@ config.py
 __pycache__
 venv/
 audio.wav
+voice_entry.log
+voice_entry_raw.wav
