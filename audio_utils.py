@@ -183,6 +183,12 @@ def record_audio() -> None:
         log_utils.log_info("Recording interrupted by user")
     finally:
         with _lock:
+            # One final read to capture any remaining audio in the buffer
+            if _stream is not None and _wave_file is not None:
+                if _stream.get_read_available() > 0:
+                    data = _stream.read(_stream.get_read_available(), exception_on_overflow=False)
+                    _wave_file.writeframes(data)
+            
             if _stream is not None:
                 _stream.stop_stream()
                 _stream.close()
