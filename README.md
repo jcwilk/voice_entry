@@ -1,63 +1,100 @@
 # Voice Entry
 
-A voice recording and transcription tool that uses OpenAI's Whisper API.
+A voice-to-text tool that allows you to record audio and process it in various ways.
 
-## Setup
+## Installation
 
-1. Install system dependencies:
+1. Clone the repository:
 ```bash
-sudo apt-get update
-sudo apt-get install -y python3-venv python3-pip portaudio19-dev libnotify-dev
+git clone https://github.com/yourusername/voice_entry.git
+cd voice_entry
 ```
 
-2. Create and activate virtual environment:
+2. Create and activate a virtual environment:
 ```bash
-python3 -m venv venv
+python -m venv venv
 source venv/bin/activate
 ```
 
-3. Install Python dependencies:
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Create a `config.py` file with your OpenAI API key:
-```python
-OPENAI_API_KEY = "your-api-key-here"
+4. Install system dependencies:
+```bash
+sudo apt-get install xclip xdotool
+```
+
+5. Set up your OpenAI API key:
+```bash
+cp config.example.py config.py
+# Edit config.py and add your OpenAI API key
 ```
 
 ## Usage
 
-1. Start recording:
+The tool provides several commands for different operations:
+
+### Recording
+
+Start recording audio:
 ```bash
-./cmd/record.sh
+cmd/record.sh
 ```
 
-2. Stop recording and get transcription:
+While recording is in progress, you can use the following commands:
+
+### Transcription
+
+Get the raw transcription of your recording:
 ```bash
-./cmd/record.sh
+cmd/record.sh
 ```
+This will stop the recording and show the transcription.
 
-3. Get completion from transcription:
+### Completion
+
+Get an AI-generated completion based on your recording:
 ```bash
-./cmd/completion.sh
+cmd/completion.sh
 ```
+This will process your recording through GPT-3.5 and provide a completion.
 
-4. Edit clipboard contents based on transcription:
+### Edit
+
+Edit the current clipboard content based on your recording:
 ```bash
-./cmd/edit.sh
+cmd/edit.sh
 ```
+This will use your recording as instructions to edit the text in your clipboard.
 
-5. Clean up all processes and temporary files:
+### Type
+
+Type out the transcription at the current cursor position:
 ```bash
-./cmd/clear_all.sh
+cmd/type.sh
 ```
+This will type out the transcription directly where your cursor is.
 
-## Features
+## How It Works
 
-- Voice recording with automatic transcription
-- OpenAI Whisper API integration
-- Desktop notifications
-- Clipboard integration
-- Process management
-- Temporary file cleanup 
+1. Start recording with `cmd/record.sh`
+2. While recording, use any of the other commands to process the audio
+3. The tool will:
+   - Stop recording
+   - Transcribe the audio
+   - Process it according to the command used
+   - Either copy to clipboard, type out, or show the result
+
+## Requirements
+
+- Python 3.8+
+- OpenAI API key
+- xclip (for clipboard operations)
+- xdotool (for typing functionality)
+- ALSA (for audio recording)
+
+## License
+
+MIT 

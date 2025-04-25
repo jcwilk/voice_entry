@@ -16,7 +16,6 @@ from gi.repository import Notify
 # File paths
 AUDIO_FILE_NAME: str = os.path.join(tempfile.gettempdir(), "voice_entry_audio.wav")
 PID_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry.pid")
-TEXT_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry_text.txt")
 
 # OpenAI client
 client = OpenAI(api_key=config.OPENAI_API_KEY)
@@ -47,21 +46,6 @@ def get_recording_pid() -> Optional[int]:
         log_utils.log_error(f"Error reading PID file: {e}")
         return None
 
-def stop_recording(pid: int) -> None:
-    """Stop a running recording process."""
-    log_utils.log_info(f"Attempting to stop recording process {pid}")
-    try:
-        os.kill(pid, signal.SIGINT)
-        # Wait a moment for the process to finish writing the audio file
-        time.sleep(0.5)
-        os.remove(PID_FILE)
-        log_utils.log_info(f"Successfully stopped recording process {pid}")
-    except ProcessLookupError:
-        log_utils.log_warning(f"Process {pid} not found")
-        if os.path.exists(PID_FILE):
-            os.remove(PID_FILE)
-            log_utils.log_info("Removed stale PID file")
-
 def transcribe_audio() -> Optional[str]:
     """Transcribe the audio file and return the text."""
     log_utils.log_info("Starting audio transcription")
@@ -73,29 +57,9 @@ def transcribe_audio() -> Optional[str]:
             )
         text = transcript.text
         log_utils.log_info(f"Transcription successful: {text[:50]}...")
-        
-        # Save text to temporary file
-        with open(TEXT_FILE, 'w') as f:
-            f.write(text)
-        log_utils.log_info("Transcription saved to file")
-            
         return text
     except Exception as e:
         log_utils.log_error(f"Error transcribing audio: {e}")
-        return None
-
-def get_transcribed_text() -> Optional[str]:
-    """Get the most recently transcribed text."""
-    if not os.path.exists(TEXT_FILE):
-        log_utils.log_debug("No transcription file found")
-        return None
-    try:
-        with open(TEXT_FILE, 'r') as f:
-            text = f.read().strip()
-            log_utils.log_debug(f"Read transcription: {text[:50]}...")
-            return text
-    except Exception as e:
-        log_utils.log_error(f"Error reading transcription: {e}")
         return None
 
 def get_clipboard() -> Optional[str]:
@@ -148,4 +112,18 @@ def get_completion(text: str, mode: str = "context") -> Optional[str]:
         return completion
     except Exception as e:
         log_utils.log_error(f"Error getting completion: {e}")
-        return None 
+        return None
+
+def type_text(text: str) -> None:
+    """Type out text at the current cursor position.
+    
+    Args:
+        text: The text to type out
+    """
+    try:
+        # Use xdotool to type the text
+        subprocess.run(['xdotool', 'type', '--clearmodifiers', text], check=True)
+    except subprocess.CalledProcessError as e:
+        log_utils.log_error(f"Failed to type text: {e}")
+    except FileNotFoundError:
+        log_utils.log_error("xdotool not found. Please install it to use the type functionality.") 

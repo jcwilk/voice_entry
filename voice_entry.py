@@ -35,6 +35,11 @@ def handle_transcription_signal(signum, frame, state: audio_utils.AudioState):
     log_utils.log_info("Received signal to show transcription")
     audio_utils.process_audio_and_notify("Transcription", lambda text: text, state)
 
+def handle_type_signal(signum, frame, state: audio_utils.AudioState):
+    """Handle signal to type out transcription."""
+    log_utils.log_info("Received signal to type transcription")
+    audio_utils.process_audio_and_notify("Type", lambda text: text, state, should_type=True)
+
 def handle_record_mode():
     """Handle record mode operation."""
     if audio_utils.is_recording():
@@ -58,6 +63,7 @@ def handle_record_mode():
         signal.signal(signal.SIGUSR1, lambda s, f: handle_completion_signal(s, f, state))
         signal.signal(signal.SIGUSR2, lambda s, f: handle_edit_signal(s, f, state))
         signal.signal(signal.SIGINT, lambda s, f: handle_transcription_signal(s, f, state))
+        signal.signal(signal.SIGTERM, lambda s, f: handle_type_signal(s, f, state))
         
         # Start recording in a separate thread
         recording_thread = threading.Thread(target=audio_utils.record_audio, args=(state,))
@@ -91,6 +97,13 @@ def handle_edit_mode():
     else:
         log_utils.log_warning("No recording in progress")
 
+def handle_type_mode():
+    """Handle type mode operation."""
+    if audio_utils.is_recording():
+        audio_utils.send_signal_to_recording(signal.SIGTERM)
+    else:
+        log_utils.log_warning("No recording in progress")
+
 def main():
     """Main entry point."""
     log_utils.log_info("Record mode started")
@@ -106,6 +119,8 @@ def main():
         handle_completion_mode()
     elif mode == "edit":
         handle_edit_mode()
+    elif mode == "type":
+        handle_type_mode()
     else:
         log_utils.log_error(f"Unknown mode: {mode}")
 

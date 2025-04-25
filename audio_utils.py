@@ -26,13 +26,14 @@ class AudioState(NamedTuple):
 
 _lock = threading.Lock()
 
-def process_audio_and_notify(operation: str, process_func, state: AudioState) -> None:
+def process_audio_and_notify(operation: str, process_func, state: AudioState, should_type: bool = False) -> None:
     """Process recorded audio and notify with the result.
     
     Args:
         operation: Name of the operation (e.g. "Completion", "Edit", "Transcription")
         process_func: Function to process the transcription text
         state: Current audio recording state
+        should_type: Whether to type out the result instead of copying to clipboard
     """
     log_utils.log_info(f"Processing audio for {operation}")
     
@@ -65,9 +66,15 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState) ->
         os._exit(0)  # Exit the process
         return
     
-    # Copy result to clipboard and notify
-    voice_utils.set_clipboard(result)
-    log_utils.log_info(f"{operation} copied to clipboard: {result[:50]}...")
+    if should_type:
+        # Type out the result
+        voice_utils.type_text(result)
+        log_utils.log_info(f"{operation} typed out: {result[:50]}...")
+    else:
+        # Copy result to clipboard and notify
+        voice_utils.set_clipboard(result)
+        log_utils.log_info(f"{operation} copied to clipboard: {result[:50]}...")
+    
     voice_utils.send_notification(operation, result)
     
     # Exit the process after handling the signal
