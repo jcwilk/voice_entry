@@ -94,13 +94,13 @@ def get_completion(text: str, mode: str = "context") -> Optional[str]:
                 return None
             
             system_prompt = """You are an AI system designed to edit text based on voice directives. Your task is to:
-1. Take the provided text from the clipboard
-2. Use the voice directive to understand what changes are needed
-3. Generate an edited version of the text that incorporates the requested changes
-4. Maintain the original style and tone while making the requested modifications
-5. Return only the edited text, without explanations or commentary"""
+1. Take the provided original_text
+2. Use the voice_directive to understand what changes are needed
+3. Generate an edited version of the original_text that incorporates the requested changes
+4. Maintain the original style and tone while making the requested modifications, if applicable
+5. Respond with only the edited text, without explanations or commentary"""
             
-            user_prompt = f"Original text:\n{clipboard_text}\n\nVoice directive for editing:\n{text}"
+            user_prompt = f"<original_text>{clipboard_text}</original_text>\n<voice_directive>{text}</voice_directive>"
         else:
             system_prompt = """You are an AI system designed to process dictated directives and generate concise text responses suitable for clipboard use. Your functionalities include:
 
@@ -112,11 +112,13 @@ def get_completion(text: str, mode: str = "context") -> Optional[str]:
             user_prompt = text
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
-            ]
+            ],
+            temperature=0.1,
+            max_tokens=2000
         )
         completion = response.choices[0].message.content
         log_utils.log_info(f"Completion successful: {completion[:50]}...")
