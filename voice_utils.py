@@ -133,7 +133,7 @@ def type_text(text: str) -> None:
     """
     try:
         # Use xdotool to type the text
-        subprocess.run(['xdotool', 'type', '--clearmodifiers', text], check=True)
+        subprocess.run(['xdotool', 'type', '--clearmodifiers', '--delay', '1', text], check=True)
     except subprocess.CalledProcessError as e:
         log_utils.log_error(f"Failed to type text: {e}")
     except FileNotFoundError:
