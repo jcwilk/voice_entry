@@ -13,9 +13,9 @@ import gi
 from pathlib import Path
 gi.require_version('Notify', '0.7')
 from gi.repository import Notify
+from io import BytesIO
 
 # File paths
-AUDIO_FILE_NAME: str = os.path.join(tempfile.gettempdir(), "voice_entry_audio.wav")
 PID_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry.pid")
 
 # OpenAI client
@@ -47,27 +47,20 @@ def get_recording_pid() -> Optional[int]:
         log_utils.log_error(f"Error reading PID file: {e}")
         return None
 
-def transcribe_audio() -> Optional[str]:
-    """Transcribe the audio file and return the text."""
+def transcribe_audio(audio_file) -> Optional[str]:
+    """Transcribe the audio data and return the text.
+    
+    Args:
+        audio_file: A file-like object or path to the audio file
+        
+    Returns:
+        Transcribed text if successful, None otherwise
+    """
     log_utils.log_info("Starting audio transcription")
     try:
-        # Use pathlib to handle the file
-        audio_path = Path(AUDIO_FILE_NAME)
-        if not audio_path.exists():
-            log_utils.log_error("Audio file does not exist")
-            return None
-            
-        if audio_path.stat().st_size == 0:
-            log_utils.log_error("Audio file is empty")
-            return None
-            
-        # Read the entire file into memory
-        audio_data = audio_path.read_bytes()
-        
-        # Create a file-like object from the bytes
-        from io import BytesIO
-        audio_file = BytesIO(audio_data)
-        audio_file.name = "audio.wav"  # Set a name for the file-like object
+        # Convert to Path if it's a string
+        if isinstance(audio_file, str):
+            audio_file = Path(audio_file)
         
         transcript = client.audio.transcriptions.create(
             model="whisper-1",

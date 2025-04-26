@@ -11,6 +11,7 @@ import threading
 import tempfile
 import signal
 import tkinter as tk
+from io import BytesIO
 
 # File paths
 AUDIO_FILE_NAME: str = os.path.join(tempfile.gettempdir(), "voice_entry_audio.wav")
@@ -53,7 +54,7 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
             os.fsync(os.open(AUDIO_FILE_NAME, os.O_RDONLY))
     
     # Transcribe the audio
-    text = voice_utils.transcribe_audio()
+    text = voice_utils.transcribe_audio(AUDIO_FILE_NAME)
     if not text:
         log_utils.log_error("No transcription available")
         os._exit(0)  # Exit the process
