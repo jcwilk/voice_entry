@@ -128,7 +128,7 @@ def get_completion(text: str, mode: str = "context") -> Optional[str]:
         return None
 
 def type_text(text: str) -> None:
-    """Type out text at the current cursor position.
+    """Type out text at the current cursor position and press Enter.
     
     Args:
         text: The text to type out
@@ -136,6 +136,8 @@ def type_text(text: str) -> None:
     try:
         # Use xdotool to type the text
         subprocess.run(['xdotool', 'type', '--clearmodifiers', '--delay', '1', text], check=True)
+        # Press Enter key
+        subprocess.run(['xdotool', 'key', 'Return'], check=True)
     except subprocess.CalledProcessError as e:
         log_utils.log_error(f"Failed to type text: {e}")
     except FileNotFoundError:
