@@ -88,7 +88,19 @@ def handle_completion_mode():
     if audio_utils.is_recording():
         audio_utils.send_signal_to_recording(signal.SIGUSR1)
     else:
-        log_utils.log_warning("No recording in progress")
+        # Get text from clipboard and process it
+        clipboard_text = voice_utils.get_clipboard()
+        if not clipboard_text:
+            log_utils.log_warning("No text in clipboard")
+            return
+        
+        # Process the clipboard text
+        completion = voice_utils.get_completion(clipboard_text)
+        if completion:
+            voice_utils.set_clipboard(completion)
+            voice_utils.send_notification("Completion", completion)
+        else:
+            log_utils.log_warning("Failed to get completion")
 
 def handle_edit_mode():
     """Handle edit mode operation."""
