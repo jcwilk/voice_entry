@@ -89,7 +89,7 @@ def run_goose(text: str) -> None:
             [
                 "goose", "run",
                 "--no-session",
-                "--with-builtin", "developer",
+                "--with-builtin", "developer,fetch,skills",
                 "-q", "--output-format", "json",
                 "-i", inst_path,
             ],
