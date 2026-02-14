@@ -7,7 +7,6 @@ from typing import Optional
 import signal
 from openai import OpenAI
 import config
-import time
 import log_utils
 import gi
 from pathlib import Path
@@ -126,19 +125,3 @@ def get_completion(text: str, mode: str = "context") -> Optional[str]:
     except Exception as e:
         log_utils.log_error(f"Error getting completion: {e}")
         return None
-
-def type_text(text: str) -> None:
-    """Type out text at the current cursor position and press Enter.
-    
-    Args:
-        text: The text to type out
-    """
-    try:
-        # Use xdotool to type the text
-        subprocess.run(['xdotool', 'type', '--clearmodifiers', '--delay', '1', text], check=True)
-        # Press Enter key
-        subprocess.run(['xdotool', 'key', 'Return'], check=True)
-    except subprocess.CalledProcessError as e:
-        log_utils.log_error(f"Failed to type text: {e}")
-    except FileNotFoundError:
-        log_utils.log_error("xdotool not found. Please install it to use the type functionality.") 

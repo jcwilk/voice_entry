@@ -5,6 +5,7 @@ gi.require_version('Notify', '0.7')
 from gi.repository import Notify
 import voice_utils
 import audio_utils
+import type_utils
 import log_utils
 import time
 import os
@@ -114,7 +115,13 @@ def handle_type_mode():
     if audio_utils.is_recording():
         audio_utils.send_signal_to_recording(signal.SIGTERM)
     else:
-        log_utils.log_warning("No recording in progress")
+        # Type out whatever is currently in the clipboard
+        clipboard_text = voice_utils.get_clipboard()
+        if not clipboard_text:
+            log_utils.log_warning("No text in clipboard")
+            return
+        
+        type_utils.type_out(clipboard_text)
 
 def main():
     """Main entry point."""

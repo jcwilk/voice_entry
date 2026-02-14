@@ -7,6 +7,7 @@ import time
 from typing import List, Optional, NamedTuple
 import voice_utils
 import log_utils
+import type_utils
 import threading
 import tempfile
 import signal
@@ -68,15 +69,12 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
         return
     
     if should_type:
-        # Type out the result
-        voice_utils.type_text(result)
-        log_utils.log_info(f"{operation} typed out: {result[:50]}...")
+        type_utils.type_out(result, operation)
     else:
         # Copy result to clipboard and notify
         voice_utils.set_clipboard(result)
         log_utils.log_info(f"{operation} copied to clipboard: {result[:50]}...")
-    
-    voice_utils.send_notification(operation, result)
+        voice_utils.send_notification(operation, result)
     
     # Exit the process after handling the signal
     os._exit(0)
