@@ -45,6 +45,7 @@ You can set up hotkeys in your desktop environment's keyboard shortcuts settings
    - `cmd/completion.sh` - Get completion (recommended: alt+shift+v)
    - `cmd/edit.sh` - Edit clipboard content (recommended: alt+shift+x)
    - `cmd/type.sh` - Type out transcription (recommended: alt+shift+d)
+   - `cmd/goose.sh` - Run Goose AI agent with transcription or clipboard (recommended: alt+shift+g)
 
 ### Recording
 
@@ -95,6 +96,18 @@ This will:
 - Transcribe the audio
 - Type out the transcription directly where your cursor is without affecting your clipboard
 
+### Goose
+
+Run the Goose AI agent with your transcription or clipboard content:
+```bash
+cmd/goose.sh
+```
+This will:
+- If recording: Stop the recording, transcribe the audio, and feed the transcription straight into Goose (no clipboard)
+- If not recording: Take the text from your clipboard and run Goose with it
+
+Uses an isolated Goose run (`--no-session`) so it won't mix with your desktop or existing Goose sessions. Requires [Goose](https://github.com/block/goose) to be installed.
+
 ### Cleanup
 
 If you need to stop all voice entry processes and clean up temporary files:
@@ -110,6 +123,7 @@ cmd/clear_all.sh
 - xdotool (for typing functionality)
 - libnotify-bin (for desktop notifications)
 - ALSA (for audio recording)
+- Goose (optional, for goose mode): [Install from GitHub](https://github.com/block/goose)
 
 ## License
 

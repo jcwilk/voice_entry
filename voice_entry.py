@@ -3,6 +3,7 @@
 from utils import voice
 from utils import audio
 from utils import typing
+from utils import goose
 from utils import log
 from utils import notification
 import time
@@ -34,6 +35,11 @@ def handle_type_signal(signum, frame, state: audio.AudioState):
     log.log_info("Received signal to type transcription")
     audio.process_audio_and_notify("Type", lambda text: text, state, should_type=True)
 
+def handle_goose_signal(signum, frame, state: audio.AudioState):
+    """Handle signal to run transcription through Goose."""
+    log.log_info("Received signal to run Goose")
+    audio.process_audio_and_notify("Goose", lambda text: text, state, should_run_goose=True)
+
 def handle_record_mode():
     """Handle record mode operation."""
     if audio.is_recording():
@@ -58,6 +64,7 @@ def handle_record_mode():
         signal.signal(signal.SIGUSR2, lambda s, f: handle_edit_signal(s, f, state))
         signal.signal(signal.SIGINT, lambda s, f: handle_transcription_signal(s, f, state))
         signal.signal(signal.SIGTERM, lambda s, f: handle_type_signal(s, f, state))
+        signal.signal(signal.SIGRTMIN, lambda s, f: handle_goose_signal(s, f, state))
         
         # Start recording in a separate thread
         recording_thread = threading.Thread(target=audio.record_audio, args=(state,))
@@ -116,6 +123,19 @@ def handle_type_mode():
         
         typing.type_out(clipboard_text)
 
+def handle_goose_mode():
+    """Handle Goose mode operation."""
+    if audio.is_recording():
+        # Transcribe and feed straight into Goose, no clipboard
+        audio.send_signal_to_recording(signal.SIGRTMIN)
+    else:
+        # Take clipboard content and run with it
+        clipboard_text = voice.get_clipboard()
+        if not clipboard_text:
+            log.log_warning("No text in clipboard")
+            return
+        goose.run_goose(clipboard_text)
+
 def main():
     """Main entry point."""
     log.log_info("Record mode started")
@@ -133,6 +153,8 @@ def main():
         handle_edit_mode()
     elif mode == "type":
         handle_type_mode()
+    elif mode == "goose":
+        handle_goose_mode()
     else:
         log.log_error(f"Unknown mode: {mode}")
 

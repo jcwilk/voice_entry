@@ -9,6 +9,7 @@ from utils import voice
 from utils import log
 from utils import notification
 from utils import typing
+from utils import goose
 import threading
 import tempfile
 import signal
@@ -27,7 +28,7 @@ class AudioState(NamedTuple):
 
 _lock = threading.Lock()
 
-def process_audio_and_notify(operation: str, process_func, state: AudioState, should_type: bool = False) -> None:
+def process_audio_and_notify(operation: str, process_func, state: AudioState, should_type: bool = False, should_run_goose: bool = False) -> None:
     """Process recorded audio and notify with the result.
     
     Args:
@@ -35,6 +36,7 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
         process_func: Function to process the transcription text
         state: Current audio recording state
         should_type: Whether to type out the result instead of copying to clipboard
+        should_run_goose: Whether to pass the result to Goose instead of clipboard/typing
     """
     log.log_info(f"Processing audio for {operation}")
     
@@ -68,7 +70,11 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
         os._exit(0)  # Exit the process
         return
     
-    if should_type:
+    if should_run_goose:
+        log.log_info(f"{operation} passing to Goose: {result[:50]}...")
+        notification.send_notification(operation, f"Running Goose: {result}")
+        goose.run_goose(result)
+    elif should_type:
         typing.type_out(result, operation)
     else:
         # Copy result to clipboard and notify
