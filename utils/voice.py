@@ -7,11 +7,8 @@ from typing import Optional
 import signal
 from openai import OpenAI
 import config
-import log_utils
-import gi
+from utils import log
 from pathlib import Path
-gi.require_version('Notify', '0.7')
-from gi.repository import Notify
 from io import BytesIO
 
 # File paths
@@ -20,30 +17,24 @@ PID_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry.pid")
 # OpenAI client
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-def send_notification(title: str, text: str) -> None:
-    """Send a desktop notification."""
-    Notify.init("Voice Entry")
-    notification = Notify.Notification.new(title, text, None)
-    notification.show()
-
 def set_clipboard(text: str) -> None:
     """Copy text to clipboard."""
-    log_utils.log_info(f"Copying to clipboard: {text[:50]}...")
+    log.log_info(f"Copying to clipboard: {text[:50]}...")
     process = subprocess.Popen(['xclip', '-selection', 'c'], stdin=subprocess.PIPE)
     process.communicate(text.encode('utf-8'))
 
 def get_recording_pid() -> Optional[int]:
     """Get the PID of the currently running recording process."""
     if not os.path.exists(PID_FILE):
-        log_utils.log_debug("No PID file found")
+        log.log_debug("No PID file found")
         return None
     try:
         with open(PID_FILE, 'r') as f:
             pid = int(f.read().strip())
-            log_utils.log_debug(f"Found PID file with PID: {pid}")
+            log.log_debug(f"Found PID file with PID: {pid}")
             return pid
     except (ValueError, FileNotFoundError) as e:
-        log_utils.log_error(f"Error reading PID file: {e}")
+        log.log_error(f"Error reading PID file: {e}")
         return None
 
 def transcribe_audio(audio_file) -> Optional[str]:
@@ -55,7 +46,7 @@ def transcribe_audio(audio_file) -> Optional[str]:
     Returns:
         Transcribed text if successful, None otherwise
     """
-    log_utils.log_info("Starting audio transcription")
+    log.log_info("Starting audio transcription")
     try:
         # Convert to Path if it's a string
         if isinstance(audio_file, str):
@@ -66,10 +57,10 @@ def transcribe_audio(audio_file) -> Optional[str]:
             file=audio_file
         )
         text = transcript.text
-        log_utils.log_info(f"Transcription successful: {text[:50]}...")
+        log.log_info(f"Transcription successful: {text[:50]}...")
         return text
     except Exception as e:
-        log_utils.log_error(f"Error transcribing audio: {e}")
+        log.log_error(f"Error transcribing audio: {e}")
         return None
 
 def get_clipboard() -> Optional[str]:
@@ -79,17 +70,17 @@ def get_clipboard() -> Optional[str]:
         output, _ = process.communicate()
         return output.decode('utf-8').strip()
     except Exception as e:
-        log_utils.log_error(f"Error reading clipboard: {e}")
+        log.log_error(f"Error reading clipboard: {e}")
         return None
 
 def get_completion(text: str, mode: str = "context") -> Optional[str]:
     """Send text to OpenAI for completion and return the response."""
-    log_utils.log_info(f"Sending text to OpenAI for {mode} completion")
+    log.log_info(f"Sending text to OpenAI for {mode} completion")
     try:
         if mode == "edit":
             clipboard_text = get_clipboard()
             if not clipboard_text:
-                log_utils.log_error("No clipboard content available")
+                log.log_error("No clipboard content available")
                 return None
             
             system_prompt = """You are an AI system designed to edit text based on voice directives. Your task is to:
@@ -120,8 +111,8 @@ def get_completion(text: str, mode: str = "context") -> Optional[str]:
             max_tokens=2000
         )
         completion = response.choices[0].message.content
-        log_utils.log_info(f"Completion successful: {completion[:50]}...")
+        log.log_info(f"Completion successful: {completion[:50]}...")
         return completion
     except Exception as e:
-        log_utils.log_error(f"Error getting completion: {e}")
+        log.log_error(f"Error getting completion: {e}")
         return None

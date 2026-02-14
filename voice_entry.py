@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-import gi
-gi.require_version('Notify', '0.7')
-from gi.repository import Notify
-import voice_utils
-import audio_utils
-import type_utils
-import log_utils
+from utils import voice
+from utils import audio
+from utils import typing
+from utils import log
+from utils import notification
 import time
 import os
 import threading
@@ -16,49 +14,44 @@ import pyaudio
 import wave
 from typing import Optional
 
-def print_and_notify(title: str, text: str) -> None:
-    """Log and send a notification."""
-    log_utils.log_info(f"{title}: {text}")
-    voice_utils.send_notification(title, text)
-
-def handle_completion_signal(signum, frame, state: audio_utils.AudioState):
+def handle_completion_signal(signum, frame, state: audio.AudioState):
     """Handle signal to process completion."""
-    log_utils.log_info("Received signal to show completion")
-    audio_utils.process_audio_and_notify("Completion", voice_utils.get_completion, state)
+    log.log_info("Received signal to show completion")
+    audio.process_audio_and_notify("Completion", voice.get_completion, state)
 
-def handle_edit_signal(signum, frame, state: audio_utils.AudioState):
+def handle_edit_signal(signum, frame, state: audio.AudioState):
     """Handle signal to process edit."""
-    log_utils.log_info("Received signal to show edit")
-    audio_utils.process_audio_and_notify("Edit", lambda text: voice_utils.get_completion(text, mode="edit"), state)
+    log.log_info("Received signal to show edit")
+    audio.process_audio_and_notify("Edit", lambda text: voice.get_completion(text, mode="edit"), state)
 
-def handle_transcription_signal(signum, frame, state: audio_utils.AudioState):
+def handle_transcription_signal(signum, frame, state: audio.AudioState):
     """Handle signal to process transcription."""
-    log_utils.log_info("Received signal to show transcription")
-    audio_utils.process_audio_and_notify("Transcription", lambda text: text, state)
+    log.log_info("Received signal to show transcription")
+    audio.process_audio_and_notify("Transcription", lambda text: text, state)
 
-def handle_type_signal(signum, frame, state: audio_utils.AudioState):
+def handle_type_signal(signum, frame, state: audio.AudioState):
     """Handle signal to type out transcription."""
-    log_utils.log_info("Received signal to type transcription")
-    audio_utils.process_audio_and_notify("Type", lambda text: text, state, should_type=True)
+    log.log_info("Received signal to type transcription")
+    audio.process_audio_and_notify("Type", lambda text: text, state, should_type=True)
 
 def handle_record_mode():
     """Handle record mode operation."""
-    if audio_utils.is_recording():
+    if audio.is_recording():
         # If recording is in progress, treat this as a request for transcription
-        log_utils.log_info("Recording in progress, getting transcription...")
-        audio_utils.send_signal_to_recording(signal.SIGINT)
+        log.log_info("Recording in progress, getting transcription...")
+        audio.send_signal_to_recording(signal.SIGINT)
         return
     
     # Start new recording
     # Write PID file
     pid = os.getpid()
-    with open(audio_utils.PID_FILE, 'w') as f:
+    with open(audio.PID_FILE, 'w') as f:
         f.write(str(pid))
-    log_utils.log_info("No recording in progress, starting new recording...")
+    log.log_info("No recording in progress, starting new recording...")
     
     try:
         # Initialize state
-        state = audio_utils.AudioState()
+        state = audio.AudioState()
         
         # Set up signal handlers with state
         signal.signal(signal.SIGUSR1, lambda s, f: handle_completion_signal(s, f, state))
@@ -67,68 +60,68 @@ def handle_record_mode():
         signal.signal(signal.SIGTERM, lambda s, f: handle_type_signal(s, f, state))
         
         # Start recording in a separate thread
-        recording_thread = threading.Thread(target=audio_utils.record_audio, args=(state,))
+        recording_thread = threading.Thread(target=audio.record_audio, args=(state,))
         recording_thread.daemon = True
         recording_thread.start()
         
         # Notify user
-        log_utils.log_info("Recording: Voice recording started...")
-        voice_utils.send_notification("Recording", "Voice recording started...")
+        log.log_info("Recording: Voice recording started...")
+        notification.send_notification("Recording", "Voice recording started...")
         
         # Wait for recording thread to finish
         recording_thread.join()
         
     finally:
         # Clean up
-        log_utils.log_info("Removing PID file after recording")
-        if os.path.exists(audio_utils.PID_FILE):
-            os.remove(audio_utils.PID_FILE)
+        log.log_info("Removing PID file after recording")
+        if os.path.exists(audio.PID_FILE):
+            os.remove(audio.PID_FILE)
 
 def handle_completion_mode():
     """Handle completion mode operation."""
-    if audio_utils.is_recording():
-        audio_utils.send_signal_to_recording(signal.SIGUSR1)
+    if audio.is_recording():
+        audio.send_signal_to_recording(signal.SIGUSR1)
     else:
         # Get text from clipboard and process it
-        clipboard_text = voice_utils.get_clipboard()
+        clipboard_text = voice.get_clipboard()
         if not clipboard_text:
-            log_utils.log_warning("No text in clipboard")
+            log.log_warning("No text in clipboard")
             return
         
         # Process the clipboard text
-        completion = voice_utils.get_completion(clipboard_text)
+        completion = voice.get_completion(clipboard_text)
         if completion:
-            voice_utils.set_clipboard(completion)
-            voice_utils.send_notification("Completion", completion)
+            voice.set_clipboard(completion)
+            notification.send_notification("Completion", completion)
         else:
-            log_utils.log_warning("Failed to get completion")
+            log.log_warning("Failed to get completion")
 
 def handle_edit_mode():
     """Handle edit mode operation."""
-    if audio_utils.is_recording():
-        audio_utils.send_signal_to_recording(signal.SIGUSR2)
+    if audio.is_recording():
+        audio.send_signal_to_recording(signal.SIGUSR2)
     else:
-        log_utils.log_warning("No recording in progress")
+        log.log_warning("No recording in progress")
 
 def handle_type_mode():
     """Handle type mode operation."""
-    if audio_utils.is_recording():
-        audio_utils.send_signal_to_recording(signal.SIGTERM)
+    if audio.is_recording():
+        audio.send_signal_to_recording(signal.SIGTERM)
     else:
         # Type out whatever is currently in the clipboard
-        clipboard_text = voice_utils.get_clipboard()
+        clipboard_text = voice.get_clipboard()
         if not clipboard_text:
-            log_utils.log_warning("No text in clipboard")
+            log.log_warning("No text in clipboard")
             return
         
-        type_utils.type_out(clipboard_text)
+        typing.type_out(clipboard_text)
 
 def main():
     """Main entry point."""
-    log_utils.log_info("Record mode started")
+    log.log_info("Record mode started")
     
     if len(os.sys.argv) < 2:
-        log_utils.log_error("No mode specified")
+        log.log_error("No mode specified")
         return
     
     mode = os.sys.argv[1]
@@ -141,7 +134,7 @@ def main():
     elif mode == "type":
         handle_type_mode()
     else:
-        log_utils.log_error(f"Unknown mode: {mode}")
+        log.log_error(f"Unknown mode: {mode}")
 
 if __name__ == "__main__":
     main()

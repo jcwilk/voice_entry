@@ -8,8 +8,8 @@ import subprocess
 from pathlib import Path
 import tempfile
 import time
-import voice_utils
-import log_utils
+from utils import notification
+from utils import log
 
 TYPE_LOCK_FILE = os.path.join(tempfile.gettempdir(), "voice_entry_type.lock")
 Path(TYPE_LOCK_FILE).touch(exist_ok=True)
@@ -26,9 +26,9 @@ def _type_text(text: str) -> None:
             check=True
         )
     except subprocess.CalledProcessError as e:
-        log_utils.log_error(f"Failed to type text: {e}")
+        log.log_error(f"Failed to type text: {e}")
     except FileNotFoundError:
-        log_utils.log_error("xdotool not found. Please install it to use the type functionality.")
+        log.log_error("xdotool not found. Please install it to use the type functionality.")
 
 
 def type_out(text: str, operation: str = "Type") -> None:
@@ -38,7 +38,7 @@ def type_out(text: str, operation: str = "Type") -> None:
         text: The text to type out
         operation: Name of the operation for logging/notification
     """
-    log_utils.log_info(f"{operation} typing out: {text[:50]}...")
+    log.log_info(f"{operation} typing out: {text[:50]}...")
     with open(TYPE_LOCK_FILE, "w") as lockfile:
         fcntl.flock(lockfile.fileno(), fcntl.LOCK_EX)
         try:
@@ -48,4 +48,4 @@ def type_out(text: str, operation: str = "Type") -> None:
             time.sleep(0.2)
         finally:
             fcntl.flock(lockfile.fileno(), fcntl.LOCK_UN)
-    voice_utils.send_notification(operation, text)
+    notification.send_notification(operation, text)

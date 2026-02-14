@@ -4,8 +4,8 @@ import os
 import logging
 from datetime import datetime
 
-# Set up logging to file
-LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "voice_entry.log")
+# Set up logging to file - keep log in project root
+LOG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "voice_entry.log")
 
 # Create a specific logger for our application
 logger = logging.getLogger('voice_entry')
@@ -37,4 +37,4 @@ def log_error(msg: str) -> None:
     logger.error(msg)
 
 def log_exception(msg: str) -> None:
-    logger.exception(msg) 
+    logger.exception(msg)

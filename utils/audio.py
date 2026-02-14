@@ -5,13 +5,13 @@ import pyaudio
 import wave
 import time
 from typing import List, Optional, NamedTuple
-import voice_utils
-import log_utils
-import type_utils
+from utils import voice
+from utils import log
+from utils import notification
+from utils import typing
 import threading
 import tempfile
 import signal
-import tkinter as tk
 from io import BytesIO
 
 # File paths
@@ -36,7 +36,7 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
         state: Current audio recording state
         should_type: Whether to type out the result instead of copying to clipboard
     """
-    log_utils.log_info(f"Processing audio for {operation}")
+    log.log_info(f"Processing audio for {operation}")
     
     # Stop recording and clean up
     with _lock:
@@ -55,26 +55,26 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
             os.fsync(os.open(AUDIO_FILE_NAME, os.O_RDONLY))
     
     # Transcribe the audio
-    text = voice_utils.transcribe_audio(AUDIO_FILE_NAME)
+    text = voice.transcribe_audio(AUDIO_FILE_NAME)
     if not text:
-        log_utils.log_error("No transcription available")
+        log.log_error("No transcription available")
         os._exit(0)  # Exit the process
         return
     
     # Process the text using the provided function
     result = process_func(text)
     if not result:
-        log_utils.log_error(f"Failed to process text for {operation}")
+        log.log_error(f"Failed to process text for {operation}")
         os._exit(0)  # Exit the process
         return
     
     if should_type:
-        type_utils.type_out(result, operation)
+        typing.type_out(result, operation)
     else:
         # Copy result to clipboard and notify
-        voice_utils.set_clipboard(result)
-        log_utils.log_info(f"{operation} copied to clipboard: {result[:50]}...")
-        voice_utils.send_notification(operation, result)
+        voice.set_clipboard(result)
+        log.log_info(f"{operation} copied to clipboard: {result[:50]}...")
+        notification.send_notification(operation, result)
     
     # Exit the process after handling the signal
     os._exit(0)
@@ -93,7 +93,7 @@ def record_audio(state: AudioState) -> AudioState:
     CHANNELS: int = 1
     RATE: int = 16000
 
-    log_utils.log_info("Starting audio recording")
+    log.log_info("Starting audio recording")
     audio = pyaudio.PyAudio()
     stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
@@ -131,41 +131,36 @@ def record_audio(state: AudioState) -> AudioState:
             if new_state.wave_file is not None:
                 new_state.wave_file.close()
             
-        log_utils.log_info("Recording stopped")
+        log.log_info("Recording stopped")
         return AudioState(recording=False)
 
 def is_recording() -> bool:
     """Check if a recording is in progress."""
-    pid = voice_utils.get_recording_pid()
+    pid = voice.get_recording_pid()
     if pid is None:
-        log_utils.log_debug("No recording PID file found")
+        log.log_debug("No recording PID file found")
         return False
     
     # Check if the process is still running
     try:
         os.kill(pid, 0)  # This will raise ProcessLookupError if the process is not running
-        log_utils.log_debug(f"Recording in progress with PID {pid}")
+        log.log_debug(f"Recording in progress with PID {pid}")
         return True
     except ProcessLookupError:
         # Clean up stale PID file
-        if os.path.exists(voice_utils.PID_FILE):
-            log_utils.log_warning(f"Found stale PID file for process {pid}, removing")
-            os.remove(voice_utils.PID_FILE)
+        if os.path.exists(voice.PID_FILE):
+            log.log_warning(f"Found stale PID file for process {pid}, removing")
+            os.remove(voice.PID_FILE)
         return False
 
 def send_signal_to_recording(signal_type: int) -> None:
     """Send a signal to the recording process."""
-    pid = voice_utils.get_recording_pid()
+    pid = voice.get_recording_pid()
     if pid is not None:
         try:
             os.kill(pid, signal_type)
-            log_utils.log_info(f"Sent signal {signal_type} to process {pid}")
+            log.log_info(f"Sent signal {signal_type} to process {pid}")
         except ProcessLookupError:
-            log_utils.log_error(f"Process {pid} not found")
+            log.log_error(f"Process {pid} not found")
     else:
-        log_utils.log_warning("No recording process found")
-
-def set_menu(menu: tk.Menu, root: tk.Tk) -> None:
-    """Set the global menu instance."""
-    # This function is no longer needed as we're using menu_utils
-    pass 
+        log.log_warning("No recording process found")
