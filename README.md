@@ -46,6 +46,8 @@ You can set up hotkeys in your desktop environment's keyboard shortcuts settings
    - `cmd/edit.sh` - Edit clipboard content (recommended: alt+shift+x)
    - `cmd/type.sh` - Type out transcription (recommended: alt+shift+d)
    - `cmd/goose.sh` - Run Goose AI agent with transcription or clipboard (recommended: alt+shift+g)
+   - `cmd/perplexity.sh` - Query Perplexity SonarPro with transcription or clipboard (recommended: alt+shift+p)
+   - `cmd/append.sh` - Append transcription or selection to clipboard (recommended: alt+shift+a)
 
 ### Recording
 
@@ -108,6 +110,32 @@ This will:
 
 Uses an isolated Goose run (`--no-session`) so it won't mix with your desktop or existing Goose sessions. Requires [Goose](https://github.com/block/goose) to be installed.
 
+### Perplexity
+
+Query Perplexity SonarPro with your transcription or clipboard content:
+```bash
+cmd/perplexity.sh
+```
+This will:
+- If recording: Stop the recording, transcribe the audio, and send the transcription to Perplexity SonarPro
+- If not recording: Take the text from your clipboard and query Perplexity with it
+- If neither: Show a notification error
+
+Requires a Perplexity API key. Set `PERPLEXITY_API_KEY` in your environment or in `config.py`.
+
+### Append
+
+Append text to the clipboard:
+```bash
+cmd/append.sh
+```
+This will:
+- If recording: Stop the recording, transcribe the audio, and append the transcription to the clipboard (with two newlines between)
+- If not recording: Take the primary selection (highlighted text) and append it to the clipboard (with two newlines between)
+- If neither: Show an error notification
+
+Uses the X11 primary selection buffer (what gets filled when you highlight text) when not recording.
+
 ### Cleanup
 
 If you need to stop all voice entry processes and clean up temporary files:
@@ -124,6 +152,7 @@ cmd/clear_all.sh
 - libnotify-bin (for desktop notifications)
 - ALSA (for audio recording)
 - Goose (optional, for goose mode): [Install from GitHub](https://github.com/block/goose)
+- Perplexity API key (optional, for perplexity mode): [Get from Perplexity](https://www.perplexity.ai/settings/api)
 
 ## License
 

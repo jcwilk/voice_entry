@@ -10,6 +10,7 @@ from utils import log
 from utils import notification
 from utils import typing
 from utils import goose
+from utils import perplexity
 import threading
 import tempfile
 import signal
@@ -28,15 +29,17 @@ class AudioState(NamedTuple):
 
 _lock = threading.Lock()
 
-def process_audio_and_notify(operation: str, process_func, state: AudioState, should_type: bool = False, should_run_goose: bool = False) -> None:
+def process_audio_and_notify(operation: str, process_func, state: AudioState, should_type: bool = False, should_run_goose: bool = False, should_run_perplexity: bool = False, should_append: bool = False) -> None:
     """Process recorded audio and notify with the result.
-    
+
     Args:
         operation: Name of the operation (e.g. "Completion", "Edit", "Transcription")
         process_func: Function to process the transcription text
         state: Current audio recording state
         should_type: Whether to type out the result instead of copying to clipboard
         should_run_goose: Whether to pass the result to Goose instead of clipboard/typing
+        should_run_perplexity: Whether to pass the result to Perplexity instead of clipboard/typing
+        should_append: Whether to append the result to clipboard (with two newlines between)
     """
     log.log_info(f"Processing audio for {operation}")
     
@@ -74,6 +77,16 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
         log.log_info(f"{operation} passing to Goose: {result[:50]}...")
         notification.send_notification(operation, f"Running Goose: {result}")
         goose.run_goose(result)
+    elif should_run_perplexity:
+        log.log_info(f"{operation} passing to Perplexity: {result[:50]}...")
+        notification.send_notification(operation, f"Running Perplexity: {result}")
+        perplexity.run_perplexity(result)
+    elif should_append:
+        clipboard = voice.get_clipboard() or ""
+        new_content = f"{clipboard}\n\n{result}" if clipboard else result
+        voice.set_clipboard(new_content)
+        log.log_info(f"{operation} appended to clipboard: {result[:50]}...")
+        notification.send_notification(operation, f"Appended: {result[:80]}...")
     elif should_type:
         typing.type_out(result, operation)
     else:
