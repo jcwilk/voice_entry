@@ -5,8 +5,9 @@ import pyaudio
 import wave
 import time
 from typing import List, Optional, NamedTuple
-from utils import voice
 from utils import log
+from utils import openai
+from utils import xclip
 from utils import notification
 from utils import typing
 from utils import goose
@@ -20,6 +21,22 @@ from io import BytesIO
 AUDIO_FILE_NAME: str = os.path.join(tempfile.gettempdir(), "voice_entry_audio.wav")
 PID_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry.pid")
 TEXT_FILE: str = os.path.join(tempfile.gettempdir(), "voice_entry_text.txt")
+
+
+def get_recording_pid() -> Optional[int]:
+    """Get the PID of the currently running recording process."""
+    if not os.path.exists(PID_FILE):
+        log.log_debug("No PID file found")
+        return None
+    try:
+        with open(PID_FILE, 'r') as f:
+            pid = int(f.read().strip())
+            log.log_debug(f"Found PID file with PID: {pid}")
+            return pid
+    except (ValueError, FileNotFoundError) as e:
+        log.log_error(f"Error reading PID file: {e}")
+        return None
+
 
 class AudioState(NamedTuple):
     stream: Optional[pyaudio.Stream] = None
@@ -60,7 +77,7 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
             os.fsync(os.open(AUDIO_FILE_NAME, os.O_RDONLY))
     
     # Transcribe the audio
-    text = voice.transcribe_audio(AUDIO_FILE_NAME)
+    text = openai.transcribe_audio(AUDIO_FILE_NAME)
     if not text:
         log.log_error("No transcription available")
         os._exit(0)  # Exit the process
@@ -82,16 +99,16 @@ def process_audio_and_notify(operation: str, process_func, state: AudioState, sh
         notification.send_notification(operation, f"Running Perplexity: {result}")
         perplexity.run_perplexity(result)
     elif should_append:
-        clipboard = voice.get_clipboard() or ""
+        clipboard = xclip.get_clipboard() or ""
         new_content = f"{clipboard}\n\n{result}" if clipboard else result
-        voice.set_clipboard(new_content)
+        xclip.set_clipboard(new_content)
         log.log_info(f"{operation} appended to clipboard: {result[:50]}...")
         notification.send_notification(operation, f"Appended: {result[:80]}...")
     elif should_type:
         typing.type_out(result, operation)
     else:
         # Copy result to clipboard and notify
-        voice.set_clipboard(result)
+        xclip.set_clipboard(result)
         log.log_info(f"{operation} copied to clipboard: {result[:50]}...")
         notification.send_notification(operation, result)
     
@@ -155,7 +172,7 @@ def record_audio(state: AudioState) -> AudioState:
 
 def is_recording() -> bool:
     """Check if a recording is in progress."""
-    pid = voice.get_recording_pid()
+    pid = get_recording_pid()
     if pid is None:
         log.log_debug("No recording PID file found")
         return False
@@ -167,14 +184,14 @@ def is_recording() -> bool:
         return True
     except ProcessLookupError:
         # Clean up stale PID file
-        if os.path.exists(voice.PID_FILE):
+        if os.path.exists(PID_FILE):
             log.log_warning(f"Found stale PID file for process {pid}, removing")
-            os.remove(voice.PID_FILE)
+            os.remove(PID_FILE)
         return False
 
 def send_signal_to_recording(signal_type: int) -> None:
     """Send a signal to the recording process."""
-    pid = voice.get_recording_pid()
+    pid = get_recording_pid()
     if pid is not None:
         try:
             os.kill(pid, signal_type)

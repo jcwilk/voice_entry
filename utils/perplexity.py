@@ -7,7 +7,7 @@ from openai import OpenAI
 import config
 from utils import log
 from utils import notification
-from utils import voice
+from utils import xclip
 
 
 def run_perplexity(text: str) -> None:
@@ -46,7 +46,7 @@ def run_perplexity(text: str) -> None:
         )
         result = response.choices[0].message.content
         if result:
-            voice.set_clipboard(result)
+            xclip.set_clipboard(result)
             log.log_info(f"Copied to clipboard: {result[:50]}...")
             notification.send_notification("Perplexity", result)
         else:

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from utils import voice
 from utils import audio
+from utils import openai
+from utils import xclip
 from utils import typing
 from utils import goose
 from utils import perplexity
@@ -19,12 +20,12 @@ from typing import Optional
 def handle_completion_signal(signum, frame, state: audio.AudioState):
     """Handle signal to process completion."""
     log.log_info("Received signal to show completion")
-    audio.process_audio_and_notify("Completion", voice.get_completion, state)
+    audio.process_audio_and_notify("Completion", openai.get_completion, state)
 
 def handle_edit_signal(signum, frame, state: audio.AudioState):
     """Handle signal to process edit."""
     log.log_info("Received signal to show edit")
-    audio.process_audio_and_notify("Edit", lambda text: voice.get_completion(text, mode="edit"), state)
+    audio.process_audio_and_notify("Edit", lambda text: openai.get_edit(text, xclip.get_clipboard), state)
 
 def handle_transcription_signal(signum, frame, state: audio.AudioState):
     """Handle signal to process transcription."""
@@ -106,15 +107,15 @@ def handle_completion_mode():
         audio.send_signal_to_recording(signal.SIGUSR1)
     else:
         # Get text from clipboard and process it
-        clipboard_text = voice.get_clipboard()
+        clipboard_text = xclip.get_clipboard()
         if not clipboard_text:
             log.log_warning("No text in clipboard")
             return
         
         # Process the clipboard text
-        completion = voice.get_completion(clipboard_text)
+        completion = openai.get_completion(clipboard_text)
         if completion:
-            voice.set_clipboard(completion)
+            xclip.set_clipboard(completion)
             notification.send_notification("Completion", completion)
         else:
             log.log_warning("Failed to get completion")
@@ -132,7 +133,7 @@ def handle_type_mode():
         audio.send_signal_to_recording(signal.SIGTERM)
     else:
         # Type out whatever is currently in the clipboard
-        clipboard_text = voice.get_clipboard()
+        clipboard_text = xclip.get_clipboard()
         if not clipboard_text:
             log.log_warning("No text in clipboard")
             return
@@ -146,7 +147,7 @@ def handle_goose_mode():
         audio.send_signal_to_recording(signal.SIGRTMIN)
     else:
         # Take clipboard content and run with it
-        clipboard_text = voice.get_clipboard()
+        clipboard_text = xclip.get_clipboard()
         if not clipboard_text:
             log.log_warning("No text in clipboard")
             notification.send_notification("Goose", "No text in clipboard")
@@ -161,7 +162,7 @@ def handle_perplexity_mode():
         audio.send_signal_to_recording(signal.SIGRTMIN + 1)
     else:
         # Take clipboard content and run with it
-        clipboard_text = voice.get_clipboard()
+        clipboard_text = xclip.get_clipboard()
         if not clipboard_text:
             log.log_warning("No text in clipboard")
             notification.send_notification("Perplexity", "No text in clipboard")
@@ -176,14 +177,14 @@ def handle_append_mode():
         audio.send_signal_to_recording(signal.SIGRTMIN + 2)
     else:
         # Take primary selection and append to clipboard
-        selection = voice.get_primary_selection()
+        selection = xclip.get_primary_selection()
         if not selection:
             log.log_warning("No selection and no recording")
             notification.send_notification("Append", "No selection and no recording in progress")
             return
-        clipboard = voice.get_clipboard() or ""
+        clipboard = xclip.get_clipboard() or ""
         new_content = f"{clipboard}\n\n{selection}" if clipboard else selection
-        voice.set_clipboard(new_content)
+        xclip.set_clipboard(new_content)
         log.log_info(f"Appended selection to clipboard: {selection[:50]}...")
         notification.send_notification("Append", f"Appended: {selection[:80]}...")
 
